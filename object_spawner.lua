@@ -59,31 +59,35 @@ object_spawner:add_imgui(displayFilteredList)
 
 object_spawner:add_separator()
 
-object_spawner:add_button("Spawn Selected", function()
-    script.run_in_fiber(function()
-        local ped = PLAYER.GET_PLAYER_PED(network.get_selected_player())
-        local coords = ENTITY.GET_ENTITY_COORDS(ped, false)
-        local heading = ENTITY.GET_ENTITY_HEADING(ped)
-        local forwardX = ENTITY.GET_ENTITY_FORWARD_X(ped)
-        local forwardY = ENTITY.GET_ENTITY_FORWARD_Y(ped)
-        local object = filteredItems[prop_index+1]
-            if object then
-                while not STREAMING.HAS_MODEL_LOADED(object.hash) do
-                    STREAMING.REQUEST_MODEL(object.hash)
-                    coroutine.yield()
+object_spawner:add_imgui(function()
+    local ped = PLAYER.GET_PLAYER_PED(network.get_selected_player())
+    local coords = ENTITY.GET_ENTITY_COORDS(ped, false)
+    local heading = ENTITY.GET_ENTITY_HEADING(ped)
+    local forwardX = ENTITY.GET_ENTITY_FORWARD_X(ped)
+    local forwardY = ENTITY.GET_ENTITY_FORWARD_Y(ped)
+    local object = filteredItems[prop_index+1]
+    if ImGui.Button("Spawn Selected") then
+        script.run_in_fiber(function()
+                if object then
+                    while not STREAMING.HAS_MODEL_LOADED(object.hash) do
+                        STREAMING.REQUEST_MODEL(object.hash)
+                        coroutine.yield()
+                    end
                 end
-            end
-        local prop = OBJECT.CREATE_OBJECT(object.hash, coords.x + (forwardX * 1), coords.y + (forwardY * 1), coords.z, true, true, false)
-        ENTITY.SET_ENTITY_HEADING(prop, heading)
-        OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(prop)
-        ENTITY.SET_ENTITY_AS_NO_LONGER_NEEDED(prop)
-    end)
-end)
+            local prop = OBJECT.CREATE_OBJECT(object.hash, coords.x + (forwardX * 1), coords.y + (forwardY * 1), coords.z, true, true, false)
+            ENTITY.SET_ENTITY_HEADING(prop, heading)
+            OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(prop)
+        end)
+    end
 
---object_spawner:add_button("Delete Object", function()
-    --script.run_in_fiber(function()
-        --if ENTITY.DOES_ENTITY_EXIST(prop) then
-            --OBJECT.DELETE_OBJECT(prop)
-        --end
-    --end)
---end)
+        ImGui.SameLine()
+
+    if ImGui.Button("Delete Object") then
+        script.run_in_fiber(function()
+            local spawned_prop = OBJECT.GET_CLOSEST_OBJECT_OF_TYPE(coords.x + (forwardX * 1), coords.y + (forwardY * 1), coords.z, 50, object.hash, true, false, false)
+            if ENTITY.DOES_ENTITY_EXIST(spawned_prop) then
+                OBJECT.DELETE_OBJECT(spawned_prop)
+            end
+        end)
+    end
+end)
