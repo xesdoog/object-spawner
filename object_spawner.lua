@@ -7,14 +7,19 @@ local props = {
     { hash = 145818549, name = "Work Light 1"},
     { hash = 2393739772, name = "Work Light 2"},
     { hash = 3760607069, name = "Road Cone"},
-    { hash = 3186063286, name = "Camping Chair"},
-    { hash = 2796614321, name = "Patio Lounger"},
     { hash = 1792816905, name = "Kino Light (Photography)"},
     { hash = 2174673747, name = "Studio Light (Photography)"},
-    { hash = 3640564381, name = "Vending Machine"},
-    { hash = 1918323043, name = "Hobo Skid Trolley"},
+    { hash = 2796614321, name = "Patio Lounger"},
+    { hash = 3186063286, name = "Camping Chair"},
+    { hash = 3640564381, name = "Snacks Vending Machine"},
+    { hash = 690372739, name = "Coffee Vending Machine"},
     { hash = 4111834409, name = "Start/Finish Gate (Racing)"},
-    { hash = 2544207977, name = "Inflate Arch (Racing)"}
+    { hash = 2544207977, name = "Inflate Arch (Racing)"},
+    { hash = 1083683517, name = "Jetski Trailer"},
+    { hash = 812376260, name = "Tire Stack"},
+    { hash = 2156563864, name = "Race Start/Finish Road"},
+    { hash = 468818960, name = "Gazebo"},
+    { hash = 528555233, name = "Drug Package"}
 }
 
 local prop_index = 1
@@ -106,13 +111,8 @@ object_spawner:add_imgui(function()
                     end
                 end
             local prop = OBJECT.CREATE_OBJECT(object.hash, coords.x + (forwardX * 1), coords.y + (forwardY * 1), coords.z, true, true, false)
-		if prop_index == 10 then
-                	ENTITY.SET_ENTITY_HEADING(prop, heading - 180)
-                	OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(prop)
-            	else
             		ENTITY.SET_ENTITY_HEADING(prop, heading)
             		OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(prop)
-		end
         end)
     end
 
