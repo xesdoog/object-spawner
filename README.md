@@ -1,6 +1,6 @@
 ## A Lua script to spawn various objects in GTA Online using Yimmenu.
 
-![obj_spwnr](https://github.com/xesdoog/object-spawner/assets/66764345/e07fc2d1-64c4-4b83-b834-9877f3c52033)
+![obj_spwnr](https://github.com/xesdoog/object-spawner/assets/66764345/01d53004-5d02-4b16-97b2-c22203414639)
 
 ## Side Notes :
 - These objects will not be attached to anything and are not usable except ramps and lights. You can also spawn chairs then use a sitting animation from Yimmenu. Oh, and a bush that you can hide inside... (idk, don't even ask why)
