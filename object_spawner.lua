@@ -117,7 +117,7 @@ object_spawner:add_separator()
 object_spawner:add_text("Adjust Direction or Keep Default :")
 
 object_spawner:add_imgui(function()
-h_offset, _ = ImGui.SliderFloat("Heading Offset", h_offset, 0, 360)
+h_offset, _ = ImGui.SliderFloat("Heading Offset", h_offset, -180, 180)
 end)
 
 defaultSpawnDistance.x = spawnDistance.x
@@ -150,7 +150,7 @@ local object = filteredItems[prop_index+1]
                 STREAMING.REQUEST_MODEL(object.hash)
                 coroutine.yield()
             end
-            end
+        end
             local prop = OBJECT.CREATE_OBJECT(object.hash, coords.x + (forwardX * 1), coords.y + (forwardY * 1), coords.z, true, false, false)
             ENTITY.SET_ENTITY_HEADING(prop, heading)
             OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(prop)
@@ -164,7 +164,8 @@ local object = filteredItems[prop_index+1]
         end)
     end
 
-        ImGui.SameLine()
+ImGui.SameLine()
+		
     if ImGui.Button("Delete Object") then
         script.run_in_fiber(function()
         local spawned_prop = OBJECT.GET_CLOSEST_OBJECT_OF_TYPE(coords.x + (forwardX * 1), coords.y + (forwardY * 1), coords.z, 50, object.hash, true, false, false)
