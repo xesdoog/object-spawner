@@ -164,6 +164,7 @@ object_spawner:add_imgui(function()
             OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(prop)
             local netID = NETWORK.OBJ_TO_NET(prop)
             NETWORK.SET_NETWORK_ID_EXISTS_ON_ALL_MACHINES(netID, true)
+	    ENTITY.SET_ENTITY_LOD_DIST(prop, 400)
             if NETWORK.NETWORK_DOES_ENTITY_EXIST_WITH_NETWORK_ID(netID) then
                 gui.show_message("Object Spawner", "Spawned '"..object.name.."' in front of ["..player_name.."].")
             else
