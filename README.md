@@ -1,4 +1,4 @@
-## A Lua script to spawn various objects in GTA Online using YimMenu.
+## A Lua script to spawn several objects in GTA V using YimMenu.
 
 ![object_spawner](https://github.com/xesdoog/object-spawner/assets/66764345/42f49eea-28a3-44d4-9c7c-ae8bdf900d89)
 
