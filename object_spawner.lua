@@ -49,6 +49,9 @@ local function updateFilteredItems()
         if string.find(string.lower(item.name), string.lower(searchQuery)) then
             table.insert(filteredItems, item)
         end
+        table.sort(props, function(a, b)
+            return a.name < b.name
+        end)
     end
 end
 
@@ -85,6 +88,7 @@ object_spawner:add_imgui(function()
             OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(prop)
             while not NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(prop) do
                 NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(prop)
+                coroutine:yield()
             end
             if ENTITY.DOES_ENTITY_EXIST(prop) then
                 gui.show_message("Object Spawner", "Spawned '"..object.name..".")
@@ -156,7 +160,7 @@ object_spawner:add_imgui(function()
     ImGui.Separator()
 
     ImGui.Text("                                    Z Axis :")
-    spawnDistance.z, _ = ImGui.SliderFloat("   ", spawnDistance.z, -0.01, 0.01)
+    spawnDistance.z, _ = ImGui.SliderFloat("   ", spawnDistance.z, -0.05, 0.05)
     activeZ = ImGui.IsItemActive()
 
     ImGui.Separator()

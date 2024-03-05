@@ -50,4 +50,9 @@ return{
     { hash = 1142865108,    name = "Security Barrier Double"},
     { hash = 693843550,    name = "Concrete Barrier"},
     { hash = 3729169359,    name = "Road Work Sign"},
+    { hash = 316090149,    name = "Welder"},
+    { hash = 1177042352,    name = "Car Creeper"},
+    { hash = 38377736,    name = "Pile Of Boxes 01"},
+    { hash = 153748523,    name = "Pile Of Boxes 02"},
+    { hash = 296207441,    name = "T-Shirt Box"},
 }
