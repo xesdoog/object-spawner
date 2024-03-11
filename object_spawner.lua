@@ -40,6 +40,7 @@ object_spawner:add_imgui(function()
 	else
 		is_typing = false
 	end
+    ImGui.PushItemWidth(300)
 end)
 
 local filteredItems = {}
@@ -62,7 +63,6 @@ local function displayFilteredList()
         table.insert(itemNames, item.name)
     end
     prop_index, used = ImGui.ListBox("", prop_index, itemNames, #filteredItems)
-    ImGui.PushItemWidth(420)
 end
 
 object_spawner:add_imgui(displayFilteredList)
@@ -83,7 +83,7 @@ object_spawner:add_imgui(function()
                 end
                 STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(object.hash)
             end
-            prop = OBJECT.CREATE_OBJECT(object.hash, coords.x + (forwardX * 1), coords.y + (forwardY * 1), coords.z, true, true, false)
+            prop = OBJECT.CREATE_OBJECT(object.hash, coords.x + (forwardX * 1.7), coords.y + (forwardY * 1.7), coords.z, true, true, false)
             ENTITY.SET_ENTITY_HEADING(prop, heading)
             OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(prop)
             while not NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(prop) do
@@ -123,8 +123,6 @@ object_spawner:add_imgui(function()
     ImGui.SameLine()
     ImGui.Spacing()
     ImGui.SameLine()
-    ImGui.Spacing()
-    ImGui.SameLine()
 
     if ImGui.Button("   Delete  ") then
         script.run_in_fiber(function()
@@ -139,57 +137,51 @@ end)
 
 object_spawner:add_separator()
 
-object_spawner:add_text("Adjust Prop Position:")
-
 defaultSpawnDistance.x = spawnDistance.x
 defaultSpawnDistance.y = spawnDistance.y
 defaultSpawnDistance.z = spawnDistance.z
 default_h_offset = h_offset
 
 object_spawner:add_imgui(function()
-    ImGui.Text("                                    X Axis :")
-    spawnDistance.x, _ = ImGui.SliderFloat(" ", spawnDistance.x, -0.1, 0.1)
-    activeX = ImGui.IsItemActive()
-
-    ImGui.Separator()
-
-    ImGui.Text("                                    Y Axis :")
-    spawnDistance.y, _ = ImGui.SliderFloat("  ", spawnDistance.y, -0.1, 0.1)
-    activeY = ImGui.IsItemActive()
-
-    ImGui.Separator()
-
-    ImGui.Text("                                    Z Axis :")
-    spawnDistance.z, _ = ImGui.SliderFloat("   ", spawnDistance.z, -0.05, 0.05)
-    activeZ = ImGui.IsItemActive()
-
-    ImGui.Separator()
-
-    ImGui.Text("                                    Heading :")
-    h_offset, _ = ImGui.SliderInt("    ", h_offset, -10, 10)
-    activeH = ImGui.IsItemActive()
-
-    ImGui.Spacing()
-    ImGui.Separator()
-
     edit_mode, used = ImGui.Checkbox("Edit Mode", edit_mode, true)
+    ImGui.SameLine()
+    ImGui.TextDisabled("(?)")
     if ImGui.IsItemHovered() then
         ImGui.BeginTooltip()
         ImGui.Text("Enable to reposition the prop \nafter you spawn it.")
         ImGui.EndTooltip()
     end
-
-    ImGui.Spacing()
-
+    if edit_mode then
+        ImGui.Text("Move Object:")
+        ImGui.Text("                                    X Axis :")
+        spawnDistance.x, _ = ImGui.SliderFloat(" ", spawnDistance.x, -0.1, 0.1)
+        activeX = ImGui.IsItemActive()
+        ImGui.Separator()
+        ImGui.Text("                                    Y Axis :")
+        spawnDistance.y, _ = ImGui.SliderFloat("  ", spawnDistance.y, -0.1, 0.1)
+        activeY = ImGui.IsItemActive()
+        ImGui.Separator()
+        ImGui.Text("                                    Z Axis :")
+        spawnDistance.z, _ = ImGui.SliderFloat("   ", spawnDistance.z, -0.05, 0.05)
+        activeZ = ImGui.IsItemActive()
+        ImGui.Separator()
+        ImGui.Text("                                    Heading :")
+        h_offset, _ = ImGui.SliderInt("    ", h_offset, -10, 10)
+        activeH = ImGui.IsItemActive()
+    end
     if ImGui.Button("   Reset   ") then
         resetSliders()
+        ENTITY.SET_ENTITY_COORDS(prop, coords.x + (forwardX * 1.7), coords.y + (forwardY * 1.7), coords.z)
+        ENTITY.SET_ENTITY_HEADING(prop, heading)
+        OBJECT.PLACE_OBJECT_ON_GROUND_OR_OBJECT_PROPERLY(prop)
     end
+    ImGui.SameLine()
+    ImGui.TextDisabled("(?)")
     if ImGui.IsItemHovered() then
         ImGui.BeginTooltip()
-        ImGui.Text("Reset the sliders and place the prop\nin front of you.")
+        ImGui.Text("Reset the sliders to zero and teleport\nthe prop in front of you.")
         ImGui.EndTooltip()
     end
-    resetPos = ImGui.IsItemActive()
 end)
 
 script.register_looped("edit mode", function(script)
@@ -208,11 +200,6 @@ script.register_looped("edit mode", function(script)
         end
         if activeH then
             ENTITY.SET_ENTITY_HEADING(prop, current_heading + h_offset)
-        end
-        if resetPos then
-            ENTITY.SET_ENTITY_COORDS(prop, coords.x + (forwardX * 1), coords.y + (forwardY * 1), coords.z)
-            ENTITY.SET_ENTITY_HEADING(prop, heading)
-            OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(prop)
         end
     end
 end)
