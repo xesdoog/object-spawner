@@ -84,4 +84,7 @@ return{
     { hash = 1863514296,    name = "CEO: Narcotics Crate"},
     { hash = 797797701,    name = "CEO: Medical Crate 01"},
     { hash = 1054352436,    name = "CEO: Medical Crate 02"},
+    { hash = 3065816791,    name = "Statue: Twerk"},
+    { hash = 3575308339,    name = "Statue: Dab"},
+    { hash = 2307648186,    name = "Statue: Cherries"},
 }
