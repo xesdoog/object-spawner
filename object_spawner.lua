@@ -12,28 +12,28 @@ local activeX = false
 local activeY = false
 local activeZ = false
 local activeH = false
+local searchQuery = ""
+local is_typing = false
 local function resetSliders()
     spawnDistance.x = defaultSpawnDistance.x
     spawnDistance.y = defaultSpawnDistance.y
     spawnDistance.z = defaultSpawnDistance.z
     h_offset = default_h_offset
 end
-object_spawner:add_text("Search:")
-local searchQuery = ""
-local is_typing = false
 script.register_looped("Object Spawner", function()
 	if is_typing then
 		PAD.DISABLE_ALL_CONTROL_ACTIONS(0)
 	end
 end)
 object_spawner:add_imgui(function()
-    searchQuery, used = ImGui.InputText("", searchQuery, 128)
+    ImGui.PushItemWidth(280)
+    searchQuery, used = ImGui.InputTextWithHint("##searchObjects", "Search", searchQuery, 32)
+    ImGui.PopItemWidth()
     if ImGui.IsItemActive() then
 		is_typing = true
 	else
 		is_typing = false
 	end
-    ImGui.PushItemWidth(300)
 end)
 local filteredItems = {}
 local function updateFilteredItems()
@@ -56,7 +56,11 @@ local function displayFilteredList()
     prop_index, used = ImGui.ListBox("", prop_index, itemNames, #filteredItems)
 end
 local spawned_props = {}
-object_spawner:add_imgui(displayFilteredList)
+object_spawner:add_imgui(function()
+    ImGui.PushItemWidth(300)
+    displayFilteredList()
+    ImGui.PopItemWidth()
+end)
 object_spawner:add_imgui(function()
     ped = PLAYER.GET_PLAYER_PED(PLAYER.PLAYER_ID())
     coords = ENTITY.GET_ENTITY_COORDS(ped, false)
@@ -64,6 +68,7 @@ object_spawner:add_imgui(function()
     forwardX = ENTITY.GET_ENTITY_FORWARD_X(ped)
     forwardY = ENTITY.GET_ENTITY_FORWARD_Y(ped)
     object = filteredItems[prop_index+1]
+    ImGui.Spacing()
     if ImGui.Button("   Spawn  ") then
         script.run_in_fiber(function(script)
             if object then
@@ -124,12 +129,8 @@ object_spawner:add_imgui(function()
         end)
     end
     if ImGui.Button("Debug Table") then
-        if spawned_props[k] == nil then
-            log.info("DEBUG | Index = <null>, network ID = <null>, network control = "..tostring(retval))
-        else
-            for k, v in ipairs(spawned_props) do
-                log.info("DEBUG | Index "..tostring(k)..": network ID = "..tostring(v)..", network control = "..retval)
-            end
+        for k, v in ipairs(spawned_props) do
+            log.info("DEBUG | Index "..tostring(k)..": network ID = "..tostring(v)..", network control = "..retval)
         end
     end
 end)
