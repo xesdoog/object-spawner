@@ -14,12 +14,15 @@ local activeX = false
 local activeY = false
 local activeZ = false
 local activeH = false
+local rotX = false
+local rotY = false
+local rotZ = false
 local searchQuery = ""
 local is_typing = false
-local dev = false
-local attached = false
-local attachedToSelf = false
-local attachedToSessionPlayer = false
+local debug = false
+attached = false
+attachedToSelf = false
+attachedToSessionPlayer = false
 local axisMult = 1
 local selected_bone = 0
 local spawned_props = {}
@@ -40,7 +43,7 @@ local function resetSliders()
     spawnRot.y = defaultSpawnRot.y
     spawnRot.z = defaultSpawnRot.z
 end
-script.register_looped("Object Spawner", function()
+script.register_looped("game input", function()
 	if is_typing then
 		PAD.DISABLE_ALL_CONTROL_ACTIONS(0)
 	end
@@ -89,14 +92,6 @@ local function displayBones()
     end
     selected_bone, used = ImGui.Combo("##pedBones", selected_bone, boneNames, #filteredBones)
 end
--- script.register_looped("Player", function(player)
---     session_player = PLAYER.GET_PLAYER_PED(network.get_selected_player())
---     if session_player == nil then
---         ped = self.get_ped()
---     else
---         ped = session_player
---     end
--- end)
 object_spawner:add_imgui(function()
     ImGui.PushItemWidth(300)
     displayFilteredList()
@@ -121,9 +116,9 @@ object_spawner:add_imgui(function()
             end
             prop = OBJECT.CREATE_OBJECT(object.hash, coords.x + (forwardX * 1.7), coords.y + (forwardY * 1.7), coords.z, true, true, false)
             ENTITY.SET_ENTITY_HEADING(prop, heading)
-            ENTITY.SET_ENTITY_SHOULD_FREEZE_WAITING_ON_COLLISION(prop, true)
             OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(prop)
             table.insert(spawned_props, prop)
+            ENTITY.SET_ENTITY_AS_NO_LONGER_NEEDED(prop)
             netID = NETWORK.NETWORK_GET_NETWORK_ID_FROM_ENTITY(prop)
             local counter = 0
             while not NETWORK.NETWORK_HAS_CONTROL_OF_NETWORK_ID(netID) do
@@ -136,17 +131,18 @@ object_spawner:add_imgui(function()
                     counter = counter + 1
                 end
             end
-            if NETWORK.NETWORK_HAS_CONTROL_OF_NETWORK_ID(netID) then
-                retval = "True"
-            else
-                retval = "False" end
             NETWORK.SET_NETWORK_ID_EXISTS_ON_ALL_MACHINES(netID, true)
             NETWORK.SET_NETWORK_ID_ALWAYS_EXISTS_FOR_PLAYER(netID, ped, true)
             NETWORK.SET_NETWORK_ID_CAN_MIGRATE(netID, false)
-            if dev then
+            if debug then
+                if NETWORK.NETWORK_HAS_CONTROL_OF_NETWORK_ID(netID) then
+                    retval = "True"
+                else
+                    retval = "False"
+                end
                 if OBJECT.DOES_OBJECT_OF_TYPE_EXIST_AT_COORDS(coords.x, coords.y, coords.z, 50, object.hash, true) then
                     log.info("Spawned ["..object.name.."] with handle: ["..prop.."] and network ID: ["..tostring(netID).."].")
-                    script:sleep(500)
+                    script:sleep(300)
                     log.info("Controlled By Network: "..retval)
                 else
                     gui.show_error("Object Spawner", "ERORR! '"..object.name.."' failed to load.")
@@ -166,13 +162,14 @@ object_spawner:add_imgui(function()
                     attached = false
                     attachedToSelf = false
                     attachedToSessionPlayer = false
-                    if dev then
+                    if debug then
                         log.info("Removed ["..object.name.."] with handle: ["..prop.."] and network ID: ["..tostring(netID).."].")
                         if NETWORK.NETWORK_HAS_CONTROL_OF_NETWORK_ID(netID) then
                             retval = "True"
                         else
-                            retval = "False" end
-                        script:sleep(500)
+                            retval = "False" 
+                        end
+                        script:sleep(300)
                         log.info("Controlled By Network: "..retval)
                     end
                 end
@@ -181,8 +178,11 @@ object_spawner:add_imgui(function()
     end
     ImGui.Separator()
     attachTo, used = ImGui.Checkbox("Attach Objects?", attachTo, true)
-    ImGui.SameLine() 
+    ImGui.SameLine()
     ImGui.Text("[Work In Progress]")
+    if ImGui.IsItemHovered() and ImGui.IsItemClicked(0) then
+        debug = not debug
+    end
     if ImGui.IsItemHovered() then
         ImGui.BeginTooltip()
         ImGui.Text("Works fine on yourself... kinda?\nIt's buggy when used on other\nplayers due to lack of testing.")
@@ -225,10 +225,15 @@ object_spawner:add_imgui(function()
         end
         if ImGui.Button("   Detach  ") then
             all_objects = entities.get_all_objects_as_handles()
+            if attachedToSelf then
+                targetPed = self.get_ped()
+            elseif attachedToSessionPlayer then
+                targetPed = session_player
+            end
             for _, v in ipairs(all_objects) do
                 script.run_in_fiber(function()
                     modelHash = ENTITY.GET_ENTITY_MODEL(v)
-                    attachment = ENTITY.GET_ENTITY_OF_TYPE_ATTACHED_TO_ENTITY(session_player, modelHash)
+                    attachment = ENTITY.GET_ENTITY_OF_TYPE_ATTACHED_TO_ENTITY(targetPed, modelHash)
                     if ENTITY.DOES_ENTITY_EXIST(attachment) then
                         ENTITY.DETACH_ENTITY(attachment)
                         ENTITY.SET_ENTITY_AS_NO_LONGER_NEEDED(attachment)
@@ -329,8 +334,7 @@ object_spawner:add_imgui(function()
         ImGui.EndTooltip()
     end
     ImGui.Spacing(); ImGui.Spacing(); ImGui.Spacing(); ImGui.Spacing(); ImGui.Separator()
-    dev, checked = ImGui.Checkbox("Dev Debug", dev, true)
-    if dev then
+    if debug then
         if ImGui.Button("Debug Table") then
             for k, v in ipairs(spawned_props) do
                 log.info("DEBUG | Index "..tostring(k)..": network ID = "..tostring(v)..", network control = "..retval.." Attached?: "..tostring(attached))
