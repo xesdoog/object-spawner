@@ -333,8 +333,8 @@ object_spawner:add_imgui(function()
         ImGui.Text("Reset the sliders to zero and the prop position to default.")
         ImGui.EndTooltip()
     end
-    ImGui.Spacing(); ImGui.Spacing(); ImGui.Spacing(); ImGui.Spacing(); ImGui.Separator()
     if debug then
+        ImGui.Spacing(); ImGui.Spacing(); ImGui.Spacing(); ImGui.Spacing(); ImGui.Separator()
         if ImGui.Button("Debug Table") then
             for k, v in ipairs(spawned_props) do
                 log.info("DEBUG | Index "..tostring(k)..": network ID = "..tostring(v)..", network control = "..retval.." Attached?: "..tostring(attached))
