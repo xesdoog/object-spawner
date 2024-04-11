@@ -17,9 +17,9 @@
     - Activate the ![image](https://github.com/xesdoog/object-spawner/assets/66764345/8897ec31-b494-4c31-b7a7-499591fdc84b) checkbox.
     - Select a placement from the dropdown list that will apear after checking the box.
     - Press **Attach To Yourself**.
-      > You can also attach objects to other players. First you need to select a player from YimMenu's player list then go back to the script and press **Attach To Player**. Keep in mind that this feature was never tested since I don't like toxic behavior but people asked for it so this will have bugs. Assuming it even works.
+      > You can also attach objects to other players. First you need to select a player from YimMenu's player list then go back to the script and press **Attach To Player**. Keep in mind that this feature was never tested since I don't like toxic behavior but people asked for it so here it is but it will definitely have bugs assuming it even works.
     - You can adjust the position of attached objects by enabling **Edit Mode** and using the sliders.
       > TIP: You can CTRL + left click on a slider to enter custom values.
 
 ## Issues :
-* Some props can be used as _wrecking balls?_ I will probably have to force disable object collision in Edit Mode.
+* Some props can be used as _wrecking balls?_ I will probably have to force disable object collision when **Edit Mode** is active.
