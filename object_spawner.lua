@@ -1,7 +1,7 @@
 ---@diagnostic disable: undefined-global, lowercase-global
 
 object_spawner = gui.get_tab("Object Spawner")
-props = require ("proplist")
+local props = require ("os_proplist")
 local prop_index = 1
 local h_offset = 0
 local default_h_offset = 0
@@ -27,12 +27,16 @@ local axisMult = 1
 local selected_bone = 0
 local spawned_props = {}
 local pedBones = {
-    {name = "Root", ID = 0},
-    {name = "Head", ID = 12844},
-    {name = "Right Hand", ID = 6286},
-    {name = "Left Hand", ID = 18905},
+    {name = "Root",       ID = 0    },
+    {name = "Head",       ID = 12844},
+    {name = "Spine 00",   ID = 23553},
+    {name = "Spine 01",   ID = 24816},
+    {name = "Spine 02",   ID = 24817},
+    {name = "Spine 03",   ID = 24818},
+    {name = "Right Hand", ID = 6286 },
+    {name = "Left Hand",  ID = 18905},
     {name = "Right Foot", ID = 35502},
-    {name = "Left Foot", ID = 14201},
+    {name = "Left Foot",  ID = 14201},
 }
 local function resetSliders()
     spawnDistance.x = defaultSpawnDistance.x
@@ -58,30 +62,29 @@ object_spawner:add_imgui(function()
 		is_typing = false
 	end
 end)
-local filteredItems = {}
-local function updateFilteredItems()
-    filteredItems = {}
-    for _, item in ipairs(props) do
-        if string.find(string.lower(item.name), string.lower(searchQuery)) then
-            table.insert(filteredItems, item)
+local function updateFilteredObjects()
+    filteredObjects = {}
+    for _, object in ipairs(props) do
+        if string.find(string.lower(object.name), string.lower(searchQuery)) then
+            table.insert(filteredObjects, object)
         end
         table.sort(props, function(a, b)
             return a.name < b.name
         end)
     end
 end
-local function displayFilteredList()
-    updateFilteredItems()
-    local itemNames = {}
-    for _, item in ipairs(filteredItems) do
-        table.insert(itemNames, item.name)
+local function displayFilteredObjects()
+    updateFilteredObjects()
+    local objNames = {}
+    for _, obj in ipairs(filteredObjects) do
+        table.insert(objNames, obj.name)
     end
-    prop_index, used = ImGui.ListBox("", prop_index, itemNames, #filteredItems)
+    prop_index, used = ImGui.ListBox("##propList", prop_index, objNames, #filteredObjects)
 end
 local function updateBones()
     filteredBones = {}
     for _, bone in ipairs(pedBones) do
-            table.insert(filteredBones, bone)
+        table.insert(filteredBones, bone)
     end
 end
 local function displayBones()
@@ -94,56 +97,31 @@ local function displayBones()
 end
 object_spawner:add_imgui(function()
     ImGui.PushItemWidth(300)
-    displayFilteredList()
+    displayFilteredObjects()
     ImGui.PopItemWidth()
-end)
-object_spawner:add_imgui(function()
-    ped = PLAYER.GET_PLAYER_PED(PLAYER.PLAYER_ID())
-    session_player = PLAYER.GET_PLAYER_PED(network.get_selected_player())
-    coords = ENTITY.GET_ENTITY_COORDS(ped, false)
-    heading = ENTITY.GET_ENTITY_HEADING(ped)
-    forwardX = ENTITY.GET_ENTITY_FORWARD_X(ped)
-    forwardY = ENTITY.GET_ENTITY_FORWARD_Y(ped)
-    object = filteredItems[prop_index+1]
+    -- local session_player = PLAYER.GET_PLAYER_PED(network.get_selected_player())
+    local coords = ENTITY.GET_ENTITY_COORDS(self.get_ped(), false)
+    local heading = ENTITY.GET_ENTITY_HEADING(self.get_ped())
+    local forwardX = ENTITY.GET_ENTITY_FORWARD_X(self.get_ped())
+    local forwardY = ENTITY.GET_ENTITY_FORWARD_Y(self.get_ped())
+    local prop = filteredObjects[prop_index + 1]
     ImGui.Spacing()
     if ImGui.Button("   Spawn  ") then
+        log.info(tostring(prop.hash))
         script.run_in_fiber(function(script)
-            if object then
-                while not STREAMING.HAS_MODEL_LOADED(object.hash) do
-                    STREAMING.REQUEST_MODEL(object.hash)
-                    coroutine.yield()
-                end
+            while not STREAMING.HAS_MODEL_LOADED(prop.hash) do
+                STREAMING.REQUEST_MODEL(prop.hash)
+                coroutine.yield()
             end
-            prop = OBJECT.CREATE_OBJECT(object.hash, coords.x + (forwardX * 1.7), coords.y + (forwardY * 1.7), coords.z, true, true, false)
-            ENTITY.SET_ENTITY_HEADING(prop, heading)
-            OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(prop)
-            table.insert(spawned_props, prop)
-            ENTITY.SET_ENTITY_AS_NO_LONGER_NEEDED(prop)
-            netID = NETWORK.NETWORK_GET_NETWORK_ID_FROM_ENTITY(prop)
-            local counter = 0
-            while not NETWORK.NETWORK_HAS_CONTROL_OF_NETWORK_ID(netID) do
-                NETWORK.NETWORK_REQUEST_CONTROL_OF_NETWORK_ID(netID)
-                counter = counter + 1
-                coroutine:yield()
-                if counter > 100 then
-                    return
-                else
-                    counter = counter + 1
-                end
-            end
-            NETWORK.SET_NETWORK_ID_EXISTS_ON_ALL_MACHINES(netID, true)
-            NETWORK.SET_NETWORK_ID_ALWAYS_EXISTS_FOR_PLAYER(netID, ped, true)
-            NETWORK.SET_NETWORK_ID_CAN_MIGRATE(netID, false)
+            spawnedObject = OBJECT.CREATE_OBJECT(prop.hash, coords.x + (forwardX * 1.7), coords.y + (forwardY * 1.7), coords.z, true, true, false)
+            ENTITY.SET_ENTITY_HEADING(spawnedObject, heading)
+            OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(spawnedObject)
+            table.insert(spawned_props, spawnedObject)
+            ENTITY.SET_ENTITY_AS_NO_LONGER_NEEDED(spawnedObject)
             if debug then
-                if NETWORK.NETWORK_HAS_CONTROL_OF_NETWORK_ID(netID) then
-                    retval = "True"
-                else
-                    retval = "False"
-                end
-                if OBJECT.DOES_OBJECT_OF_TYPE_EXIST_AT_COORDS(coords.x, coords.y, coords.z, 50, object.hash, true) then
-                    log.info("Spawned ["..object.name.."] with handle: ["..prop.."] and network ID: ["..tostring(netID).."].")
+                if OBJECT.DOES_OBJECT_OF_TYPE_EXIST_AT_COORDS(coords.x, coords.y, coords.z, 50, prop.hash, true) then
+                    log.info("Spawned ["..object.name.."] with handle: ["..spawnedObject.."] and network ID: ["..tostring(netID).."].")
                     script:sleep(300)
-                    log.info("Controlled By Network: "..retval)
                 else
                     gui.show_error("Object Spawner", "ERORR! '"..object.name.."' failed to load.")
                 end
@@ -163,14 +141,8 @@ object_spawner:add_imgui(function()
                     attachedToSelf = false
                     attachedToSessionPlayer = false
                     if debug then
-                        log.info("Removed ["..object.name.."] with handle: ["..prop.."] and network ID: ["..tostring(netID).."].")
-                        if NETWORK.NETWORK_HAS_CONTROL_OF_NETWORK_ID(netID) then
-                            retval = "True"
-                        else
-                            retval = "False" 
-                        end
+                        log.info("Removed ["..object.name.."] with handle: ["..spawnedObject.."].")
                         script:sleep(300)
-                        log.info("Controlled By Network: "..retval)
                     end
                 end
             end
@@ -193,47 +165,51 @@ object_spawner:add_imgui(function()
         boneData = filteredBones[selected_bone + 1]
         if ImGui.Button("Attach To Yourself") then
             if spawned_props[1] ~= nil then
-                for _, v in ipairs(spawned_props) do
-                    ENTITY.ATTACH_ENTITY_TO_ENTITY(v, self.get_ped(), PED.GET_PED_BONE_INDEX(self.get_ped(), boneData.ID), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, false, false, 2, true, 1)
-                    attached = true
-                    attachedToSelf = true
-                end
+                script.run_in_fiber(function()
+                    for _, v in ipairs(spawned_props) do
+                        ENTITY.ATTACH_ENTITY_TO_ENTITY(v, self.get_ped(), PED.GET_PED_BONE_INDEX(self.get_ped(), boneData.ID), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, false, false, 2, true, 1)
+                        attached = true
+                        attachedToSelf = true
+                    end
+                end)
             else
                 gui.show_message("Object Spawner", "There is nothing to attach! Did you spawn an object?")
             end
         end
         ImGui.SameLine()
-        if ImGui.Button("Attach To Player") then
-            controlledPed = entities.take_control_of(session_player, 350)
-            if spawned_props[1] ~= nil then
-                for _, v in ipairs(spawned_props) do
-                    if session_player ~= nil then
-                        if controlledPed then
-                            ENTITY.ATTACH_ENTITY_TO_ENTITY(v, session_player, PED.GET_PED_BONE_INDEX(session_player, boneData.ID), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, false, false, 2, true, 1)
-                            attached = true
-                            attachedToSessionPlayer = true
-                        else
-                            gui.show_error("Object Spawner", "Failed to take control of the player. Maybe they have protections?")
-                        end
-                    else
-                        gui.show_message("Object Spawner", "Click on a player from YimMenu's player list then come back.")
-                    end
-                end
-            else
-                gui.show_error("Object Spawner", "There is nothing to attach! Did you spawn an object?")
-            end
-        end
+        -- if ImGui.Button("Attach To Player") then
+        --     script.run_in_fiber(function()
+        --         local controlledPed = entities.take_control_of(session_player, 350)
+        --         if spawned_props[1] ~= nil then
+        --             for _, v in ipairs(spawned_props) do
+        --                 if session_player ~= nil then
+        --                     if controlledPed then
+        --                         ENTITY.ATTACH_ENTITY_TO_ENTITY(v, session_player, PED.GET_PED_BONE_INDEX(session_player, boneData.ID), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, false, false, 2, true, 1)
+        --                         attached = true
+        --                         attachedToSessionPlayer = true
+        --                     else
+        --                         gui.show_error("Object Spawner", "Failed to take control of the player. Maybe they have protections?")
+        --                     end
+        --                 else
+        --                     gui.show_message("Object Spawner", "Click on a player from YimMenu's player list then come back.")
+        --                 end
+        --             end
+        --         else
+        --             gui.show_error("Object Spawner", "There is nothing to attach! Did you spawn an object?")
+        --         end
+        --     end)
+        -- end
         if ImGui.Button("   Detach  ") then
-            all_objects = entities.get_all_objects_as_handles()
-            if attachedToSelf then
-                targetPed = self.get_ped()
-            elseif attachedToSessionPlayer then
-                targetPed = session_player
-            end
+            local all_objects = entities.get_all_objects_as_handles()
+            -- if attachedToSelf then
+            --     targetPed = self.get_ped()
+            -- elseif attachedToSessionPlayer then
+            --     targetPed = session_player
+            -- end
             for _, v in ipairs(all_objects) do
                 script.run_in_fiber(function()
                     modelHash = ENTITY.GET_ENTITY_MODEL(v)
-                    attachment = ENTITY.GET_ENTITY_OF_TYPE_ATTACHED_TO_ENTITY(targetPed, modelHash)
+                    attachment = ENTITY.GET_ENTITY_OF_TYPE_ATTACHED_TO_ENTITY(self.get_ped(), modelHash)
                     if ENTITY.DOES_ENTITY_EXIST(attachment) then
                         ENTITY.DETACH_ENTITY(attachment)
                         ENTITY.SET_ENTITY_AS_NO_LONGER_NEEDED(attachment)
@@ -346,52 +322,54 @@ object_spawner:add_imgui(function()
     end
 end)
 script.register_looped("edit mode", function(script)
-    if edit_mode and not attached then
-        script:yield()
-        for _, v in ipairs(spawned_props) do
-            local current_coords = ENTITY.GET_ENTITY_COORDS(v)
-            local current_heading = ENTITY.GET_ENTITY_HEADING(v)
-            if activeX then
-                ENTITY.SET_ENTITY_COORDS(v, current_coords.x + spawnDistance.x, current_coords.y, current_coords.z)
-            end
-            if activeY then
-                ENTITY.SET_ENTITY_COORDS(v, current_coords.x, current_coords.y + spawnDistance.y, current_coords.z)
-            end
-            if activeZ then
-                ENTITY.SET_ENTITY_COORDS(v, current_coords.x, current_coords.y, current_coords.z + spawnDistance.z)
-            end
-            if activeH then
-                ENTITY.SET_ENTITY_HEADING(v, current_heading + h_offset)
+    if spawned_props[1] ~= nil then
+        if edit_mode and not attached then
+            script:yield()
+            for _, v in ipairs(spawned_props) do
+                local current_coords = ENTITY.GET_ENTITY_COORDS(v)
+                local current_heading = ENTITY.GET_ENTITY_HEADING(v)
+                if activeX then
+                    ENTITY.SET_ENTITY_COORDS(v, current_coords.x + spawnDistance.x, current_coords.y, current_coords.z)
+                end
+                if activeY then
+                    ENTITY.SET_ENTITY_COORDS(v, current_coords.x, current_coords.y + spawnDistance.y, current_coords.z)
+                end
+                if activeZ then
+                    ENTITY.SET_ENTITY_COORDS(v, current_coords.x, current_coords.y, current_coords.z + spawnDistance.z)
+                end
+                if activeH then
+                    ENTITY.SET_ENTITY_HEADING(v, current_heading + h_offset)
+                end
             end
         end
-    end
-    if edit_mode and attached then
-        script:yield()
-        if attachedToSelf then
-            plyr = self.get_ped()
-        elseif attachedToSessionPlayer then
-            plyr = session_player
-        end
-        local boneCoords = PED.GET_PED_BONE_COORDS(boneData.ID)
-        local rotation = ENTITY.GET_ENTITY_ROTATION(v, 2)
-        for _, v in ipairs(spawned_props) do
-            if activeX then
-                ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
+        if edit_mode and attached then
+            script:yield()
+            if attachedToSelf then
+                plyr = self.get_ped()
+            elseif attachedToSessionPlayer then
+                plyr = session_player
             end
-            if activeY then
-                ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
-            end
-            if activeZ then
-                ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
-            end
-            if rotX then
-                ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
-            end
-            if rotY then
-                ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
-            end
-            if rotZ then
-                ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
+            local boneCoords = PED.GET_PED_BONE_COORDS(boneData.ID)
+            local rotation = ENTITY.GET_ENTITY_ROTATION(v, 2)
+            for _, v in ipairs(spawned_props) do
+                if activeX then
+                    ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
+                end
+                if activeY then
+                    ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
+                end
+                if activeZ then
+                    ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
+                end
+                if rotX then
+                    ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
+                end
+                if rotY then
+                    ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
+                end
+                if rotZ then
+                    ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
+                end
             end
         end
     end
