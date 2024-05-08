@@ -296,6 +296,10 @@ object_spawner:add_imgui(function()
             if attached then
                 ENTITY.ATTACH_ENTITY_TO_ENTITY(v, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, false, false, 2, true, 1)
             else
+                local coords   = ENTITY.GET_ENTITY_COORDS(self.get_ped(), false)
+                local forwardX = ENTITY.GET_ENTITY_FORWARD_X(self.get_ped())
+                local forwardY = ENTITY.GET_ENTITY_FORWARD_Y(self.get_ped())
+                local heading  = ENTITY.GET_ENTITY_HEADING(self.get_ped())
                 ENTITY.SET_ENTITY_COORDS(v, coords.x + (forwardX * 1.7), coords.y + (forwardY * 1.7), coords.z)
                 ENTITY.SET_ENTITY_HEADING(v, heading)
                 OBJECT.PLACE_OBJECT_ON_GROUND_OR_OBJECT_PROPERLY(v)
