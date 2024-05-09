@@ -149,7 +149,6 @@ object_spawner:add_imgui(function()
 	local forwardX = ENTITY.GET_ENTITY_FORWARD_X(self.get_ped())
 	local forwardY = ENTITY.GET_ENTITY_FORWARD_Y(self.get_ped())
 	ImGui.Spacing()
-	ImGui.SameLine()
 	if ImGui.Button("   Spawn  ") then
 		preview = false
 		script.run_in_fiber(function()
@@ -221,7 +220,7 @@ object_spawner:add_imgui(function()
 					local attachment = ENTITY.GET_ENTITY_OF_TYPE_ATTACHED_TO_ENTITY(self.get_ped(), modelHash)
 					if ENTITY.DOES_ENTITY_EXIST(attachment) then
 						ENTITY.DETACH_ENTITY(attachment)
-						OBJECT.PLACE_OBJECT_ON_GROUND_OR_OBJECT_PROPERLY(attachment)
+						-- OBJECT.PLACE_OBJECT_ON_GROUND_OR_OBJECT_PROPERLY(attachment)
 						-- ENTITY.SET_ENTITY_AS_NO_LONGER_NEEDED(attachment)
 						attached = false
 						attachedToSelf = false
@@ -311,7 +310,6 @@ object_spawner:add_imgui(function()
 end)
 script.register_looped("edit mode", function(script)
 	if spawned_props[1] ~= nil then
-		script:yield()
 		if edit_mode and not attached then
 			local current_coords = ENTITY.GET_ENTITY_COORDS(selectedObject)
 			local current_heading = ENTITY.GET_ENTITY_HEADING(selectedObject)
