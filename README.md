@@ -1,6 +1,5 @@
-## A Lua Script That Spawns Several GTA V Objects Using YimMenu.
+## A Lua Script That Spawns GTA V Objects Using YimMenu.
 
-![object_spawner](https://github.com/xesdoog/object-spawner/assets/66764345/f55443fd-0ed5-41ca-9d75-1940192b8720)
 ![object_spawner(2)](https://github.com/xesdoog/object-spawner/assets/66764345/8c5910ea-b252-4951-a8b5-145617156107)
 
 ## Setup:
@@ -11,9 +10,10 @@
 
 ## Usage :
 - By default, objects will spawn on the ground, facing the player. You can move them by enabling **Edit Mode**.
-- To reposition the object, drag the corresponding **Axis slider** and hold it. Adjust the speed at which the object moves by dragging the slider while holding LMB down. The farther from the center, the faster the object moves in that direction.
+- To reposition an object, first select it from the dropdown list that will appear after you spawn it then drag the corresponding **Axis slider** and hold it. Adjust the speed at which the object moves by dragging the slider while holding LMB down. The farther from the center, the faster the object moves in that direction.
 - **Attaching Objects:** [WIP]
     - Spawn an object.
+    - Select it from the dropdown list.
     - Activate the ![image](https://github.com/xesdoog/object-spawner/assets/66764345/8897ec31-b494-4c31-b7a7-499591fdc84b) checkbox.
     - Select a placement from the dropdown list that will apear after checking the box.
     - Press **Attach To Yourself**.
