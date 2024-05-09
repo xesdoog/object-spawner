@@ -1,4 +1,4 @@
----@diagnostic disable: undefined-global, lowercase-global
+---@diagnostic disable: all
 return {
     "02gate3_l",
     "apa_heist_apart2_door",
