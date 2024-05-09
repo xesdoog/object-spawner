@@ -4,7 +4,7 @@
 
 ## Setup:
 - Go to the [Releases](https://github.com/xesdoog/object-spawner/releases/latest) tab and download the latest version.
-- Unzip the archive and place both **object_spawner.lua** and **os_proplist.lua** inside YimMenu's scripts folder which is located at:
+- Unzip the archive and place **object_spawner.lua** and **os_proplist.lua** and **gta_objects.lua** inside YimMenu's scripts folder which is located at:
   ######
       %AppData%\YimMenu\scripts
 
