@@ -167,10 +167,14 @@ object_spawner:add_imgui(function()
 				coroutine.yield()
 			end
 			spawnedObject = OBJECT.CREATE_OBJECT(propHash, coords.x + (forwardX * 2), coords.y + (forwardY * 2), coords.z, true, true, false)
-			ENTITY.SET_ENTITY_HEADING(spawnedObject, heading)
-			OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(spawnedObject)
-			table.insert(spawned_props, spawnedObject)
-			table.insert(spawnedNames, propName)
+			if ENTITY.DOES_ENTITY_EXIST(spawnedObject) then
+				ENTITY.SET_ENTITY_HEADING(spawnedObject, heading)
+				OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(spawnedObject)
+				table.insert(spawned_props, spawnedObject)
+				table.insert(spawnedNames, propName)
+			else
+				gui.show_error("Object Spawner", "This object is blacklisted by R*.")
+			end
 		end)
 	end
 	if spawned_props[1] ~= nil then
