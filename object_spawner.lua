@@ -3,6 +3,10 @@
 object_spawner = gui.get_tab("Object Spawner")
 local custom_props     	   = require ("os_proplist")
 local gta_objets       	   = require("gta_objects")
+local coords               = ENTITY.GET_ENTITY_COORDS(self.get_ped(), false)
+local heading              = ENTITY.GET_ENTITY_HEADING(self.get_ped())
+local forwardX             = ENTITY.GET_ENTITY_FORWARD_X(self.get_ped())
+local forwardY             = ENTITY.GET_ENTITY_FORWARD_Y(self.get_ped())
 local searchQuery          = ""
 local showCustomProps      = true
 local edit_mode            = false
@@ -27,6 +31,7 @@ local selectedObject       = 0
 local h_offset             = 0
 local axisMult             = 1
 local selected_bone        = 0
+local playerIndex          = 0
 local spawned_props        = {}
 local spawnedNames         = {}
 local filteredSpawnNames   = {}
@@ -134,6 +139,33 @@ local function getNameDupes(table, name)
 	end
 	return count
 end
+local function updatePlayerList()
+	local players = entities.get_all_peds_as_handles()
+	filteredPlayers = {}
+	for _, ped in ipairs(players) do
+	  if PED.IS_PED_A_PLAYER(ped) then
+		if NETWORK.NETWORK_IS_PLAYER_ACTIVE(NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(ped)) then
+		  table.insert(filteredPlayers, ped)
+		end
+	  end
+	end
+  end
+local function displayPlayerList()
+	updatePlayerList()
+	local playerNames = {}
+	for _, player in ipairs(filteredPlayers) do
+	local playerName = PLAYER.GET_PLAYER_NAME(NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(player))
+	local playerHost = NETWORK.NETWORK_GET_HOST_PLAYER_INDEX()
+	if NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(player) == PLAYER.PLAYER_ID() then
+		playerName = playerName.."  [You]"
+	end
+	if playerHost == NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(player) then
+		playerName = playerName.."  [Host]"
+	end
+	table.insert(playerNames, playerName)
+	end
+	playerIndex, used = ImGui.Combo("##playerList", playerIndex, playerNames, #filteredPlayers)
+end
 object_spawner:add_imgui(function()
 	local isChanged = false
 	switch, isChanged = ImGui.RadioButton("Custom Objects", switch, 0)
@@ -156,11 +188,26 @@ object_spawner:add_imgui(function()
 		getAllObjects()
 		ImGui.PopItemWidth()
 	end
-	local coords   = ENTITY.GET_ENTITY_COORDS(self.get_ped(), false)
-	local heading  = ENTITY.GET_ENTITY_HEADING(self.get_ped())
-	local forwardX = ENTITY.GET_ENTITY_FORWARD_X(self.get_ped())
-	local forwardY = ENTITY.GET_ENTITY_FORWARD_Y(self.get_ped())
 	ImGui.Spacing()
+	if NETWORK.NETWORK_IS_SESSION_ACTIVE() then
+		spawnForPlayer, _ = ImGui.Checkbox("Spawn For a Player", spawnForPlayer, true)
+	end
+	if spawnForPlayer then
+		ImGui.PushItemWidth(200)
+		displayPlayerList()
+		ImGui.PopItemWidth()
+		local selectedPlayer = filteredPlayers[playerIndex + 1]
+		coords   = ENTITY.GET_ENTITY_COORDS(selectedPlayer, false)
+		heading  = ENTITY.GET_ENTITY_HEADING(selectedPlayer)
+		forwardX = ENTITY.GET_ENTITY_FORWARD_X(selectedPlayer)
+		forwardY = ENTITY.GET_ENTITY_FORWARD_Y(selectedPlayer)
+		ImGui.SameLine()
+	else
+		coords   = ENTITY.GET_ENTITY_COORDS(self.get_ped(), false)
+		heading  = ENTITY.GET_ENTITY_HEADING(self.get_ped())
+		forwardX = ENTITY.GET_ENTITY_FORWARD_X(self.get_ped())
+		forwardY = ENTITY.GET_ENTITY_FORWARD_Y(self.get_ped())
+	end
 	if ImGui.Button("   Spawn  ") then
 		preview = false
 		script.run_in_fiber(function()
@@ -288,7 +335,7 @@ object_spawner:add_imgui(function()
 				if attachedToSelf then
 					plyr = self.get_ped()
 				else
-					-- plyr = selectedPlayer
+					-- plyr = targetPlayer
 				end
 				ImGui.Text("Multiply values:")
 				ImGui.PushItemWidth(271)
