@@ -34,6 +34,7 @@ local spawnDistance        = { x = 0, y = 0, z = 0 }
 local defaultSpawnDistance = { x = 0, y = 0, z = 0 }
 local spawnRot             = { x = 0, y = 0, z = 0 }
 local defaultSpawnRot      = { x = 0, y = 0, z = 0 }
+local attachPos            = { x = 0.0, y = 0.0, z = 0.0, rotX = 0.0, rotY = 0.0, rotZ = 0.0}
 defaultSpawnDistance.x = spawnDistance.x
 defaultSpawnDistance.y = spawnDistance.y
 defaultSpawnDistance.z = spawnDistance.z
@@ -61,6 +62,7 @@ local function resetSliders()
 	spawnRot.x = defaultSpawnRot.x
 	spawnRot.y = defaultSpawnRot.y
 	spawnRot.z = defaultSpawnRot.z
+	attachPos = { x = 0.0, y = 0.0, z = 0.0, rotX = 0.0, rotY = 0.0, rotZ = 0.0}
 end
 script.register_looped("game input", function()
 	if is_typing then
@@ -213,9 +215,12 @@ object_spawner:add_imgui(function()
 					if spawned_index > 1 then
 						spawned_index = spawned_index - 1
 					end
-					attached         = false
-					attachedToSelf   = false
-					attachedToPlayer = false
+					if attached then
+						attachPos = { x = 0.0, y = 0.0, z = 0.0, rotX = 0.0, rotY = 0.0, rotZ = 0.0}
+						attached         = false
+						attachedToSelf   = false
+						attachedToPlayer = false
+					end
 				end
 			end)
 		end
@@ -239,10 +244,10 @@ object_spawner:add_imgui(function()
 					if ENTITY.DOES_ENTITY_EXIST(attachment) then
 						ENTITY.DETACH_ENTITY(attachment)
 						-- OBJECT.PLACE_OBJECT_ON_GROUND_OR_OBJECT_PROPERLY(attachment)
-						-- ENTITY.SET_ENTITY_AS_NO_LONGER_NEEDED(attachment)
 						attached = false
 						attachedToSelf = false
 						-- attachedToPlayer = false
+						attachPos = { x = 0.0, y = 0.0, z = 0.0, rotX = 0.0, rotY = 0.0, rotZ = 0.0}
 					end
 				end)
 			end
@@ -277,35 +282,92 @@ object_spawner:add_imgui(function()
 			h_offset, _ = ImGui.SliderInt("    ", h_offset, -10, 10)
 			activeH = ImGui.IsItemActive()
 			ImGui.PopItemWidth()
-		end
-		if edit_mode and attached then
-			ImGui.Text("Multiply X, Y, and Z values:")
-			axisMult, _ = ImGui.InputInt("##multiplier", axisMult, 1, 2, 0)
-			ImGui.Text("Move Attached Object:")
-			ImGui.Text("                        X Axis :")
-			ImGui.PushItemWidth(280)
-			spawnDistance.x, _ = ImGui.SliderFloat("##X", spawnDistance.x, -0.1 * axisMult, 0.1 * axisMult)
-			activeX = ImGui.IsItemActive()
-			ImGui.Separator()
-			ImGui.Text("                        Y Axis :")
-			spawnDistance.y, _ = ImGui.SliderFloat("##Y", spawnDistance.y, -0.1 * axisMult, 0.1 * axisMult)
-			activeY = ImGui.IsItemActive()
-			ImGui.Separator()
-			ImGui.Text("                        Z Axis :")
-			spawnDistance.z, _ = ImGui.SliderFloat("##Z", spawnDistance.z, -0.1 * axisMult, 0.1 * axisMult)
-			activeZ = ImGui.IsItemActive()
-			ImGui.Text("                        X Rotation :")
-			spawnRot.x, _ = ImGui.SliderFloat("##rotX", spawnRot.x, -180, 180)
-			rotX = ImGui.IsItemActive()
-			ImGui.Separator()
-			ImGui.Text("                        Y Rotation :")
-			spawnRot.y, _ = ImGui.SliderFloat("##rotY", spawnRot.y, -180, 180)
-			rotY = ImGui.IsItemActive()
-			ImGui.Separator()
-			ImGui.Text("                        Z Rotation :")
-			spawnRot.z, _ = ImGui.SliderFloat("##rotZ", spawnRot.z, -180, 180)
-			rotZ = ImGui.IsItemActive()
-			ImGui.PopItemWidth()
+		else
+			if edit_mode and attached then
+				ImGui.Text("Move Attached Object:");ImGui.Separator();ImGui.Spacing()
+				if attachedToSelf then
+					plyr = self.get_ped()
+				else
+					-- plyr = selectedPlayer
+				end
+				ImGui.Text("Multiply values:")
+				ImGui.PushItemWidth(271)
+				axisMult, _ = ImGui.InputInt("##AttachMultiplier", axisMult, 1, 2, 0)
+				ImGui.PopItemWidth()
+				ImGui.Spacing()
+				ImGui.Text("X Axis :");ImGui.SameLine();ImGui.Dummy(25, 1);ImGui.SameLine();ImGui.Text("Y Axis :");ImGui.SameLine()ImGui.Dummy(25, 1);ImGui.SameLine();ImGui.Text("Z Axis :")
+				ImGui.ArrowButton("##Xleft", 0)
+				if ImGui.IsItemActive() then
+					attachPos.x = attachPos.x + 0.001
+					ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), attachPos.x, attachPos.y, attachPos.z, attachPos.rotX, attachPos.rotY, attachPos.rotZ, false, false, false, false, 2, true, 1)
+				end
+				ImGui.SameLine()
+				ImGui.ArrowButton("##XRight", 1)
+				if ImGui.IsItemActive() then
+					attachPos.x = attachPos.x - 0.001 * axisMult
+					ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), attachPos.x, attachPos.y, attachPos.z, attachPos.rotX, attachPos.rotY, attachPos.rotZ, false, false, false, false, 2, true, 1)
+				end
+				ImGui.SameLine()ImGui.Dummy(5, 1);ImGui.SameLine()
+				ImGui.ArrowButton("##Yleft", 0)
+				if ImGui.IsItemActive() then
+					attachPos.y = attachPos.y + 0.001 * axisMult
+					ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), attachPos.x, attachPos.y, attachPos.z, attachPos.rotX, attachPos.rotY, attachPos.rotZ, false, false, false, false, 2, true, 1)
+				end
+				ImGui.SameLine()
+				ImGui.ArrowButton("##YRight", 1)
+				if ImGui.IsItemActive() then
+					attachPos.y = attachPos.y - 0.001 * axisMult
+					ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), attachPos.x, attachPos.y, attachPos.z, attachPos.rotX, attachPos.rotY, attachPos.rotZ, false, false, false, false, 2, true, 1)
+				end
+				ImGui.SameLine()ImGui.Dummy(5, 1);ImGui.SameLine()
+				ImGui.ArrowButton("##zUp", 2)
+				if ImGui.IsItemActive() then
+					attachPos.z = attachPos.z + 0.001 * axisMult
+					ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), attachPos.x, attachPos.y, attachPos.z, attachPos.rotX, attachPos.rotY, attachPos.rotZ, false, false, false, false, 2, true, 1)
+				end
+				ImGui.SameLine()
+				ImGui.ArrowButton("##zDown", 3)
+				if ImGui.IsItemActive() then
+					attachPos.z = attachPos.z - 0.001 * axisMult
+					ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), attachPos.x, attachPos.y, attachPos.z, attachPos.rotX, attachPos.rotY, attachPos.rotZ, false, false, false, false, 2, true, 1)
+				end
+				ImGui.Text("X Rotation :");ImGui.SameLine();ImGui.Text("Y Rotation :");ImGui.SameLine();ImGui.Text("Z Rotation :")
+				ImGui.ArrowButton("##rotXleft", 0)
+				if ImGui.IsItemActive() then
+					attachPos.rotX = attachPos.rotX + 1 * axisMult
+					ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), attachPos.x, attachPos.y, attachPos.z, attachPos.rotX, attachPos.rotY, attachPos.rotZ, false, false, false, false, 2, true, 1)
+				end
+				ImGui.SameLine()
+				ImGui.ArrowButton("##rotXright", 1)
+				if ImGui.IsItemActive() then
+					attachPos.rotX = attachPos.rotX - 1 * axisMult
+					ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), attachPos.x, attachPos.y, attachPos.z, attachPos.rotX, attachPos.rotY, attachPos.rotZ, false, false, false, false, 2, true, 1)
+				end
+				ImGui.SameLine()ImGui.Dummy(5, 1);ImGui.SameLine()
+				ImGui.ArrowButton("##rotYleft", 0)
+				if ImGui.IsItemActive() then
+					attachPos.rotY = attachPos.rotY + 1 * axisMult
+					ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), attachPos.x, attachPos.y, attachPos.z, attachPos.rotX, attachPos.rotY, attachPos.rotZ, false, false, false, false, 2, true, 1)
+				end
+				ImGui.SameLine()
+				ImGui.ArrowButton("##rotYright", 1)
+				if ImGui.IsItemActive() then
+					attachPos.rotY = attachPos.rotY - 1 * axisMult
+					ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), attachPos.x, attachPos.y, attachPos.z, attachPos.rotX, attachPos.rotY, attachPos.rotZ, false, false, false, false, 2, true, 1)
+				end
+				ImGui.SameLine()ImGui.Dummy(5, 1);ImGui.SameLine()
+				ImGui.ArrowButton("##rotZup", 2)
+				if ImGui.IsItemActive() then
+					attachPos.rotZ = attachPos.rotZ + 1 * axisMult
+					ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), attachPos.x, attachPos.y, attachPos.z, attachPos.rotX, attachPos.rotY, attachPos.rotZ, false, false, false, false, 2, true, 1)
+				end
+				ImGui.SameLine()
+				ImGui.ArrowButton("##rotZdown", 3)
+				if ImGui.IsItemActive() then
+					attachPos.rotZ = attachPos.rotZ - 1 * axisMult
+					ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), attachPos.x, attachPos.y, attachPos.z, attachPos.rotX, attachPos.rotY, attachPos.rotZ, false, false, false, false, 2, true, 1)
+				end
+			end
 		end
 		if ImGui.Button("   Reset   ") then
 			resetSliders()
@@ -342,33 +404,6 @@ script.register_looped("edit mode", function(script)
 			end
 			if activeH then
 				ENTITY.SET_ENTITY_HEADING(selectedObject, current_heading + h_offset)
-			end
-		end
-		if edit_mode and attached then
-			if attachedToSelf then
-				plyr = self.get_ped()
-			elseif attachedToPlayer then
-				plyr = session_player
-			end
-			local boneCoords = PED.GET_PED_BONE_COORDS(boneData.ID)
-			local rotation = ENTITY.GET_ENTITY_ROTATION(selectedObject, 2)
-			if activeX then
-				ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
-			end
-			if activeY then
-				ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
-			end
-			if activeZ then
-				ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
-			end
-			if rotX then
-				ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
-			end
-			if rotY then
-				ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
-			end
-			if rotZ then
-				ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), boneCoords.x + spawnDistance.x, boneCoords.y + spawnDistance.y, boneCoords.z  + spawnDistance.z, rotation.x + spawnRot.x, rotation.y + spawnRot.y, rotation.z + spawnRot.z, false, false, false, false, 2, true, 1)
 			end
 		end
   end
