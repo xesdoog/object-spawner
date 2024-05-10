@@ -1,22 +1,22 @@
 ---@diagnostic disable: undefined-global, lowercase-global
 
 object_spawner = gui.get_tab("Object Spawner")
-local custom_props     		 = require ("os_proplist")
-local gta_objets       		 = require("gta_objects")
+local custom_props     	   = require ("os_proplist")
+local gta_objets       	   = require("gta_objects")
 local searchQuery          = ""
 local showCustomProps      = true
 local edit_mode            = false
-local activeX          		 = false
-local activeY          		 = false
-local activeZ          		 = false
-local activeH          		 = false
-local rotX             		 = false
-local rotY              	 = false
-local rotZ             		 = false
+local activeX          	   = false
+local activeY          	   = false
+local activeZ          	   = false
+local activeH          	   = false
+local rotX             	   = false
+local rotY                 = false
+local rotZ             	   = false
 local is_typing            = false
-local attached         		 = false
-local attachedToSelf   		 = false
--- local attachedToPlayer 		 = false
+local attached         	   = false
+local attachedToSelf   	   = false
+-- local attachedToPlayer 	   = false
 local propHash             = 0
 local switch               = 0
 local default_h_offset     = 0
@@ -29,6 +29,7 @@ local axisMult             = 1
 local selected_bone        = 0
 local spawned_props        = {}
 local spawnedNames         = {}
+local filteredSpawnNames   = {}
 local spawnDistance        = { x = 0, y = 0, z = 0 }
 local defaultSpawnDistance = { x = 0, y = 0, z = 0 }
 local spawnRot             = { x = 0, y = 0, z = 0 }
@@ -122,6 +123,15 @@ local function displayBones()
 	end
 	selected_bone, used = ImGui.Combo("##pedBones", selected_bone, boneNames, #filteredBones)
 end
+local function getNameDupes(table, name)
+	local count = 0
+	for kk, nn in pairs(table) do
+		if name == nn then
+			count = count + 1
+		end
+	end
+	return count
+end
 object_spawner:add_imgui(function()
 	local isChanged = false
 	switch, isChanged = ImGui.RadioButton("Custom Objects", switch, 0)
@@ -171,6 +181,13 @@ object_spawner:add_imgui(function()
 				OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(spawnedObject)
 				table.insert(spawned_props, spawnedObject)
 				table.insert(spawnedNames, propName)
+				local dupes = getNameDupes(spawnedNames, propName)
+				if dupes > 1 then
+					newPropName = propName.." #"..tostring(dupes)
+					table.insert(filteredSpawnNames, newPropName)
+				else
+					table.insert(filteredSpawnNames, propName)
+				end
 			else
 				gui.show_error("Object Spawner", "This object is blacklisted by R*.")
 			end
@@ -179,7 +196,7 @@ object_spawner:add_imgui(function()
 	if spawned_props[1] ~= nil then
 		ImGui.Text("Spawned Objects:")
 		ImGui.PushItemWidth(180)
-		spawned_index, used = ImGui.Combo("##Spawned Objects", spawned_index, spawnedNames, #spawned_props)
+		spawned_index, used = ImGui.Combo("##Spawned Objects", spawned_index, filteredSpawnNames, #spawned_props)
 		ImGui.PopItemWidth()
 		selectedObject = spawned_props[spawned_index + 1]
 		ImGui.SameLine()
@@ -190,6 +207,7 @@ object_spawner:add_imgui(function()
 					script:sleep(100)
 					ENTITY.DELETE_ENTITY(selectedObject)
 					table.remove(spawnedNames, spawned_index + 1)
+					table.remove(filteredSpawnNames, spawned_index + 1)
 					table.remove(spawned_props, spawned_index + 1)
 					spawned_index = 0
 					if spawned_index > 1 then
