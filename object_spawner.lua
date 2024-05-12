@@ -8,45 +8,40 @@ local heading              = ENTITY.GET_ENTITY_HEADING(self.get_ped())
 local forwardX             = ENTITY.GET_ENTITY_FORWARD_X(self.get_ped())
 local forwardY             = ENTITY.GET_ENTITY_FORWARD_Y(self.get_ped())
 local searchQuery          = ""
+local propName             = ""
 local showCustomProps      = true
 local edit_mode            = false
 local activeX          	   = false
 local activeY          	   = false
 local activeZ          	   = false
-local activeH          	   = false
 local rotX             	   = false
 local rotY                 = false
 local rotZ             	   = false
 local is_typing            = false
 local attached         	   = false
 local attachedToSelf   	   = false
+local previewStarted       = false
+local isChanged            = false
 -- local attachedToPlayer 	   = false
+local prop                 = 0
 local propHash             = 0
 local switch               = 0
-local default_h_offset     = 0
 local prop_index           = 0
 local objects_index        = 0
 local spawned_index        = 0
 local selectedObject       = 0
-local h_offset             = 0
 local axisMult             = 1
 local selected_bone        = 0
 local playerIndex          = 0
+local previewEntity        = 0
+local currentObjectPreview = 0
+local zOffset              = 0
 local spawned_props        = {}
 local spawnedNames         = {}
 local filteredSpawnNames   = {}
 local spawnDistance        = { x = 0, y = 0, z = 0 }
-local defaultSpawnDistance = { x = 0, y = 0, z = 0 }
 local spawnRot             = { x = 0, y = 0, z = 0 }
-local defaultSpawnRot      = { x = 0, y = 0, z = 0 }
 local attachPos            = { x = 0.0, y = 0.0, z = 0.0, rotX = 0.0, rotY = 0.0, rotZ = 0.0}
-defaultSpawnDistance.x = spawnDistance.x
-defaultSpawnDistance.y = spawnDistance.y
-defaultSpawnDistance.z = spawnDistance.z
-default_h_offset  = h_offset
-defaultSpawnRot.x = spawnRot.x
-defaultSpawnRot.y = spawnRot.y
-defaultSpawnRot.z = spawnRot.z
 local pedBones             = {
 	{name = "Root",       ID = 0    },
 	{name = "Head",       ID = 12844},
@@ -60,14 +55,9 @@ local pedBones             = {
 	{name = "Left Foot",  ID = 14201},
 }
 local function resetSliders()
-	spawnDistance.x = defaultSpawnDistance.x
-	spawnDistance.y = defaultSpawnDistance.y
-	spawnDistance.z = defaultSpawnDistance.z
-	h_offset   = default_h_offset
-	spawnRot.x = defaultSpawnRot.x
-	spawnRot.y = defaultSpawnRot.y
-	spawnRot.z = defaultSpawnRot.z
-	attachPos = { x = 0.0, y = 0.0, z = 0.0, rotX = 0.0, rotY = 0.0, rotZ = 0.0}
+	spawnDistance = { x = 0, y = 0, z = 0 }
+	spawnRot      = { x = 0, y = 0, z = 0 }
+	attachPos     = { x = 0.0, y = 0.0, z = 0.0, rotX = 0.0, rotY = 0.0, rotZ = 0.0}
 end
 script.register_looped("game input", function()
 	if is_typing then
@@ -132,7 +122,7 @@ local function displayBones()
 end
 local function getNameDupes(table, name)
 	local count = 0
-	for kk, nn in pairs(table) do
+	for __, nn in pairs(table) do
 		if name == nn then
 			count = count + 1
 		end
@@ -149,25 +139,43 @@ local function updatePlayerList()
 		end
 	  end
 	end
-  end
+end
 local function displayPlayerList()
 	updatePlayerList()
 	local playerNames = {}
 	for _, player in ipairs(filteredPlayers) do
-	local playerName = PLAYER.GET_PLAYER_NAME(NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(player))
-	local playerHost = NETWORK.NETWORK_GET_HOST_PLAYER_INDEX()
-	if NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(player) == PLAYER.PLAYER_ID() then
-		playerName = playerName.."  [You]"
-	end
-	if playerHost == NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(player) then
-		playerName = playerName.."  [Host]"
-	end
-	table.insert(playerNames, playerName)
-	end
+      local playerName  = PLAYER.GET_PLAYER_NAME(NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(player))
+      local playerHost  = NETWORK.NETWORK_GET_HOST_PLAYER_INDEX()
+      local friendCount = NETWORK.NETWORK_GET_FRIEND_COUNT()
+      if NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(player) == PLAYER.PLAYER_ID() then
+        playerName = playerName.."  [You]"
+      end
+      if friendCount > 0 then
+        for i = 0, friendCount do
+          if playerName == NETWORK.NETWORK_GET_FRIEND_NAME(i) then
+            playerName = playerName.."  [Friend]"
+          end
+        end
+      end
+      if playerHost == NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(player) then
+        playerName = playerName.."  [Host]"
+      end
+      table.insert(playerNames, playerName)
+    end
 	playerIndex, used = ImGui.Combo("##playerList", playerIndex, playerNames, #filteredPlayers)
 end
+local function clearPreviewData()
+	pedPreviewModel     = 0
+	vehiclePreviewModel = 0
+	objectPreviewModel  = 0
+end
+local function stopPreview()
+	if previewStarted then
+		previewStarted = false
+	end
+	clearPreviewData()
+end
 object_spawner:add_imgui(function()
-	local isChanged = false
 	switch, isChanged = ImGui.RadioButton("Custom Objects", switch, 0)
 	if isChanged then
 		showCustomProps = true
@@ -183,13 +191,62 @@ object_spawner:add_imgui(function()
 		ImGui.PushItemWidth(300)
 		displayFilteredProps()
 		ImGui.PopItemWidth()
+		prop     = filteredProps[prop_index + 1]
+		propHash = prop.hash
+		propName = prop.name
 	else
 		ImGui.PushItemWidth(300)
 		getAllObjects()
 		ImGui.PopItemWidth()
+		prop     = filteredObjects[objects_index + 1]
+		propHash = joaat(prop)
+		propName = prop
 	end
 	ImGui.Spacing()
+	preview, _ = ImGui.Checkbox("Preview", preview, true)
+	if preview then
+		spawnCoords = ENTITY.GET_ENTITY_COORDS(previewEntity, false)
+		previewLoop = true
+		currentObjectPreview = propHash
+		local previewObjectPos = ENTITY.GET_ENTITY_COORDS(previewEntity, false)
+		ImGui.Text("Move Front/Back:");ImGui.SameLine();ImGui.Spacing();ImGui.SameLine();ImGui.Text("Move Up/Down:")
+		ImGui.Dummy(10, 1);ImGui.SameLine()
+		ImGui.ArrowButton("##f2", 2)
+		if ImGui.IsItemActive() then
+			forwardX = forwardX * 0.1
+			forwardY = forwardY * 0.1
+			ENTITY.SET_ENTITY_COORDS(previewEntity, previewObjectPos.x + forwardX, previewObjectPos.y + forwardY, previewObjectPos.z)
+		end
+		ImGui.SameLine()
+		ImGui.ArrowButton("##f3", 3)
+		if ImGui.IsItemActive() then
+			forwardX = forwardX * 0.1
+			forwardY = forwardY * 0.1
+			ENTITY.SET_ENTITY_COORDS(previewEntity, previewObjectPos.x - forwardX, previewObjectPos.y - forwardY, previewObjectPos.z)
+		end
+		ImGui.SameLine()ImGui.Dummy(60, 1);ImGui.SameLine()
+		ImGui.ArrowButton("##z2", 2)
+		if ImGui.IsItemActive() then
+			zOffset = zOffset + 0.01
+			ENTITY.SET_ENTITY_COORDS(previewEntity, previewObjectPos.x, previewObjectPos.y, previewObjectPos.z + 0.01)
+		end
+		ImGui.SameLine()
+		ImGui.ArrowButton("##z3", 3)
+		if ImGui.IsItemActive() then
+			zOffset = zOffset - 0.01
+			ENTITY.SET_ENTITY_COORDS(previewEntity, previewObjectPos.x, previewObjectPos.y, previewObjectPos.z - 0.01)
+		end
+	else
+		forwardX = ENTITY.GET_ENTITY_FORWARD_X(self.get_ped())
+		forwardY = ENTITY.GET_ENTITY_FORWARD_Y(self.get_ped())
+		zOffset = 0.0
+		previewStarted = false
+		previewLoop    = false
+	end
 	if NETWORK.NETWORK_IS_SESSION_ACTIVE() then
+		if not preview then
+			ImGui.SameLine()
+		end
 		spawnForPlayer, _ = ImGui.Checkbox("Spawn For a Player", spawnForPlayer, true)
 	end
 	if spawnForPlayer then
@@ -209,22 +266,16 @@ object_spawner:add_imgui(function()
 		forwardY = ENTITY.GET_ENTITY_FORWARD_Y(self.get_ped())
 	end
 	if ImGui.Button("   Spawn  ") then
-		preview = false
 		script.run_in_fiber(function()
-			if showCustomProps then
-				local prop = filteredProps[prop_index + 1]
-				propHash   = prop.hash
-				propName   = prop.name
-			else
-				local prop = filteredObjects[objects_index + 1]
-				propHash   = joaat(prop)
-				propName   = prop
-			end
 			while not STREAMING.HAS_MODEL_LOADED(propHash) do
 				STREAMING.REQUEST_MODEL(propHash)
 				coroutine.yield()
 			end
-			spawnedObject = OBJECT.CREATE_OBJECT(propHash, coords.x + (forwardX * 2), coords.y + (forwardY * 2), coords.z, true, true, false)
+			if preview then
+				spawnedObject = OBJECT.CREATE_OBJECT(propHash, spawnCoords.x, spawnCoords.y, spawnCoords.z, true, true, false)
+			else
+				spawnedObject = OBJECT.CREATE_OBJECT(propHash, coords.x + (forwardX * 3), coords.y + (forwardY * 3), coords.z, true, true, false)
+			end
 			if ENTITY.DOES_ENTITY_EXIST(spawnedObject) then
 				ENTITY.SET_ENTITY_HEADING(spawnedObject, heading)
 				OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(spawnedObject)
@@ -324,10 +375,18 @@ object_spawner:add_imgui(function()
 			ImGui.Text("                        Z Axis :")
 			spawnDistance.z, _ = ImGui.SliderFloat("   ", spawnDistance.z, -0.05 * axisMult, 0.05 * axisMult)
 			activeZ = ImGui.IsItemActive()
+			ImGui.Separator();ImGui.Text("Rotate Object:")
+			ImGui.Text("                        X Axis :")
+			spawnRot.x, _ = ImGui.SliderFloat("##xRot", spawnRot.x, -0.1 * axisMult, 0.1 * axisMult)
+			rotX = ImGui.IsItemActive()
 			ImGui.Separator()
-			ImGui.Text("                        Heading :")
-			h_offset, _ = ImGui.SliderInt("    ", h_offset, -10, 10)
-			activeH = ImGui.IsItemActive()
+			ImGui.Text("                        Y Axis :")
+			spawnRot.y, _ = ImGui.SliderFloat("##yRot", spawnRot.y, -0.1 * axisMult, 0.1 * axisMult)
+			rotY = ImGui.IsItemActive()
+			ImGui.Separator()
+			ImGui.Text("                        Z Axis :")
+			spawnRot.z, _ = ImGui.SliderFloat("##zRot", spawnRot.z, -0.5 * axisMult, 0.5 * axisMult)
+			rotZ = ImGui.IsItemActive()
 			ImGui.PopItemWidth()
 		else
 			if edit_mode and attached then
@@ -435,11 +494,63 @@ object_spawner:add_imgui(function()
 		end
 	end
 end)
-script.register_looped("edit mode", function(script)
+script.register_looped("Preview", function(preview)
+	if previewLoop then
+		local currentHeading = ENTITY.GET_ENTITY_HEADING(previewEntity)
+		if currentObjectPreview ~= previewEntity then
+			ENTITY.DELETE_ENTITY(previewEntity)
+			previewStarted = false
+		end
+		if isChanged then
+			ENTITY.DELETE_ENTITY(previewEntity)
+			previewStarted = false
+		end
+		if not ENTITY.IS_ENTITY_DEAD(self.get_ped()) then
+			while not STREAMING.HAS_MODEL_LOADED(propHash) do
+				STREAMING.REQUEST_MODEL(propHash)
+				coroutine.yield()
+			end
+			if not previewStarted then
+				previewEntity = OBJECT.CREATE_OBJECT(propHash, coords.x + forwardX * 5, coords.y + forwardY * 5, coords.z, currentHeading, false, false, false)
+				ENTITY.SET_ENTITY_ALPHA(previewEntity, 200.0, false)
+				ENTITY.SET_ENTITY_COLLISION(previewEntity, false, false)
+				ENTITY.SET_ENTITY_CAN_BE_DAMAGED(previewEntity, false)
+				ENTITY.SET_ENTITY_PROOFS(previewEntity, true, true, true, true, true, true, true, true)
+				ENTITY.SET_CAN_CLIMB_ON_ENTITY(previewEntity, false)
+				OBJECT.SET_OBJECT_ALLOW_LOW_LOD_BUOYANCY(previewEntity, false)
+				currentObjectPreview = ENTITY.GET_ENTITY_MODEL(previewEntity)
+				previewStarted = true
+				if PED.IS_PED_STOPPED(self.get_ped()) then
+					while true do
+						preview:yield()
+						currentHeading = currentHeading + 1
+						ENTITY.SET_ENTITY_HEADING(previewEntity, currentHeading)
+						preview:sleep(10)
+						if currentObjectPreview ~= ENTITY.GET_ENTITY_MODEL(previewEntity) then
+							ENTITY.DELETE_ENTITY(previewEntity)
+							previewStarted = false
+						end
+						if not PED.IS_PED_STOPPED(self.get_ped()) or not previewStarted then
+							ENTITY.SET_ENTITY_HEADING(previewEntity, currentHeading)
+							previewStarted = false
+							break
+						end
+					end
+				else
+					return
+				end
+			end
+		end
+	else
+		ENTITY.DELETE_ENTITY(previewEntity)
+		stopPreview()
+	end
+end)
+script.register_looped("edit mode", function()
 	if spawned_props[1] ~= nil then
 		if edit_mode and not attached then
 			local current_coords = ENTITY.GET_ENTITY_COORDS(selectedObject)
-			local current_heading = ENTITY.GET_ENTITY_HEADING(selectedObject)
+			local current_rotation = ENTITY.GET_ENTITY_ROTATION(selectedObject, 2)
 			if activeX then
 				ENTITY.SET_ENTITY_COORDS(selectedObject, current_coords.x + spawnDistance.x, current_coords.y, current_coords.z)
 			end
@@ -449,8 +560,14 @@ script.register_looped("edit mode", function(script)
 			if activeZ then
 				ENTITY.SET_ENTITY_COORDS(selectedObject, current_coords.x, current_coords.y, current_coords.z + spawnDistance.z)
 			end
-			if activeH then
-				ENTITY.SET_ENTITY_HEADING(selectedObject, current_heading + h_offset)
+			if rotX then
+				ENTITY.SET_ENTITY_ROTATION(selectedObject, current_rotation.x + spawnRot.x, current_rotation.y, current_rotation.z, 2, true)
+			end
+			if rotY then
+				ENTITY.SET_ENTITY_ROTATION(selectedObject, current_rotation.x, current_rotation.y + spawnRot.y, current_rotation.z, 2, true)
+			end
+			if rotZ then
+				ENTITY.SET_ENTITY_ROTATION(selectedObject, current_rotation.x, current_rotation.y, current_rotation.z + spawnRot.z, 2, true)
 			end
 		end
   end
