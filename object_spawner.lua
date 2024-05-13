@@ -295,12 +295,12 @@ object_spawner:add_imgui(function()
 	end
 	if spawned_props[1] ~= nil then
 		ImGui.Text("Spawned Objects:")
-		ImGui.PushItemWidth(180)
+		ImGui.PushItemWidth(230)
 		spawned_index, used = ImGui.Combo("##Spawned Objects", spawned_index, filteredSpawnNames, #spawned_props)
 		ImGui.PopItemWidth()
 		selectedObject = spawned_props[spawned_index + 1]
 		ImGui.SameLine()
-		if ImGui.Button("   Delete  ") then
+		if ImGui.Button("Delete") then
 			script.run_in_fiber(function(script)
 				if ENTITY.DOES_ENTITY_EXIST(selectedObject) then
 					ENTITY.SET_ENTITY_AS_MISSION_ENTITY(selectedObject)
@@ -314,7 +314,7 @@ object_spawner:add_imgui(function()
 						spawned_index = spawned_index - 1
 					end
 					if attached then
-						attachPos = { x = 0.0, y = 0.0, z = 0.0, rotX = 0.0, rotY = 0.0, rotZ = 0.0}
+						attachPos        = { x = 0.0, y = 0.0, z = 0.0, rotX = 0.0, rotY = 0.0, rotZ = 0.0}
 						attached         = false
 						attachedToSelf   = false
 						attachedToPlayer = false
@@ -480,7 +480,7 @@ object_spawner:add_imgui(function()
 			if attached then
 				ENTITY.ATTACH_ENTITY_TO_ENTITY(selectedObject, plyr, PED.GET_PED_BONE_INDEX(plyr, boneData.ID), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, false, false, 2, true, 1)
 			else
-				ENTITY.SET_ENTITY_COORDS(selectedObject, coords.x + (forwardX * 2), coords.y + (forwardY * 2), coords.z)
+				ENTITY.SET_ENTITY_COORDS(selectedObject, coords.x + (forwardX * 3), coords.y + (forwardY * 3), coords.z)
 				ENTITY.SET_ENTITY_HEADING(selectedObject, heading)
 				OBJECT.PLACE_OBJECT_ON_GROUND_OR_OBJECT_PROPERLY(selectedObject)
 			end
@@ -495,7 +495,7 @@ object_spawner:add_imgui(function()
 	end
 end)
 script.register_looped("Preview", function(preview)
-	if previewLoop then
+	if previewLoop and gui.is_open() then
 		local currentHeading = ENTITY.GET_ENTITY_HEADING(previewEntity)
 		if currentObjectPreview ~= previewEntity then
 			ENTITY.DELETE_ENTITY(previewEntity)
@@ -520,9 +520,11 @@ script.register_looped("Preview", function(preview)
 				OBJECT.SET_OBJECT_ALLOW_LOW_LOD_BUOYANCY(previewEntity, false)
 				currentObjectPreview = ENTITY.GET_ENTITY_MODEL(previewEntity)
 				previewStarted = true
-				if PED.IS_PED_STOPPED(self.get_ped()) then
-					while true do
-						preview:yield()
+			end
+			if PED.IS_PED_STOPPED(self.get_ped()) then
+				while true do
+					preview:yield()
+					if gui.is_open() then
 						currentHeading = currentHeading + 1
 						ENTITY.SET_ENTITY_HEADING(previewEntity, currentHeading)
 						preview:sleep(10)
@@ -531,14 +533,16 @@ script.register_looped("Preview", function(preview)
 							previewStarted = false
 						end
 						if not PED.IS_PED_STOPPED(self.get_ped()) or not previewStarted then
-							ENTITY.SET_ENTITY_HEADING(previewEntity, currentHeading)
 							previewStarted = false
 							break
 						end
+					else
+						ENTITY.DELETE_ENTITY(previewEntity)
+						previewStarted = false
 					end
-				else
-					return
 				end
+			else
+				return
 			end
 		end
 	else
@@ -570,5 +574,10 @@ script.register_looped("edit mode", function()
 				ENTITY.SET_ENTITY_ROTATION(selectedObject, current_rotation.x, current_rotation.y, current_rotation.z + spawnRot.z, 2, true)
 			end
 		end
-  end
+		for k, v in ipairs(spawned_props) do
+			if not ENTITY.DOES_ENTITY_EXIST(v) then
+				table.remove(spawned_props, k)
+			end
+		end
+    end
 end)
