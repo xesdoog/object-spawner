@@ -1,14 +1,14 @@
 ---@diagnostic disable: undefined-global, lowercase-global
 
 object_spawner = gui.get_tab("Object Spawner")
-local custom_props     	   = require ("os_proplist")
-local gta_objets       	   = require("gta_objects")
+require ("os_data")
 local coords               = ENTITY.GET_ENTITY_COORDS(self.get_ped(), false)
 local heading              = ENTITY.GET_ENTITY_HEADING(self.get_ped())
 local forwardX             = ENTITY.GET_ENTITY_FORWARD_X(self.get_ped())
 local forwardY             = ENTITY.GET_ENTITY_FORWARD_Y(self.get_ped())
 local searchQuery          = ""
 local propName             = ""
+local invalidType          = ""
 local showCustomProps      = true
 local edit_mode            = false
 local activeX          	   = false
@@ -22,6 +22,7 @@ local attached         	   = false
 local attachedToSelf   	   = false
 local previewStarted       = false
 local isChanged            = false
+local showInvalidObjText   = false
 -- local attachedToPlayer 	   = false
 local prop                 = 0
 local propHash             = 0
@@ -76,9 +77,9 @@ object_spawner:add_imgui(function()
 end)
 local function updateFilteredProps()
 	filteredProps = {}
-	for _, prop in ipairs(custom_props) do
-		if string.find(string.lower(prop.name), string.lower(searchQuery)) then
-			table.insert(filteredProps, prop)
+	for _, p in ipairs(custom_props) do
+		if string.find(string.lower(p.name), string.lower(searchQuery)) then
+			table.insert(filteredProps, p)
 		end
 		table.sort(custom_props, function(a, b)
 			return a.name < b.name
@@ -88,10 +89,15 @@ end
 local function displayFilteredProps()
 	updateFilteredProps()
 	local propNames = {}
-	for _, prop in ipairs(filteredProps) do
-		table.insert(propNames, prop.name)
+	for _, p in ipairs(filteredProps) do
+		table.insert(propNames, p.name)
 	end
 	prop_index, used = ImGui.ListBox("##propList", prop_index, propNames, #filteredProps)
+	prop = filteredProps[prop_index + 1]
+	if prop ~= nil then
+		propHash = prop.hash
+		propName = prop.name
+	end
 end
 local function getAllObjects()
 	filteredObjects = {}
@@ -105,6 +111,29 @@ local function getAllObjects()
 		end
 	end
 	objects_index, used = ImGui.ListBox("##gtaObjectsList", objects_index, filteredObjects, #filteredObjects)
+	prop     = filteredObjects[objects_index + 1]
+	propHash = joaat(prop)
+	propName = prop
+	if gui.is_open() and not showCustomProps then
+		for _, b in ipairs(mp_blacklist) do
+			if propName == b then
+				showInvalidObjText = true
+				invalidType = "blacklisted by Rockstar and will not spawn."
+				break
+			else
+				showInvalidObjText = false
+			end
+			for _, c in ipairs(crash_objects) do
+				if propName == c then
+					showInvalidObjText = true
+					invalidType = "a crash object. Proceed with caution!"
+					break
+				else
+					showInvalidObjText = false
+				end
+			end
+		end
+	end
 end
 local function updateBones()
 	filteredBones = {}
@@ -191,22 +220,16 @@ object_spawner:add_imgui(function()
 		ImGui.PushItemWidth(300)
 		displayFilteredProps()
 		ImGui.PopItemWidth()
-		prop     = filteredProps[prop_index + 1]
-		propHash = prop.hash
-		propName = prop.name
 	else
 		ImGui.PushItemWidth(300)
 		getAllObjects()
 		ImGui.PopItemWidth()
-		prop     = filteredObjects[objects_index + 1]
-		propHash = joaat(prop)
-		propName = prop
 	end
 	ImGui.Spacing()
 	preview, _ = ImGui.Checkbox("Preview", preview, true)
 	if preview then
-		spawnCoords = ENTITY.GET_ENTITY_COORDS(previewEntity, false)
-		previewLoop = true
+		spawnCoords          = ENTITY.GET_ENTITY_COORDS(previewEntity, false)
+		previewLoop          = true
 		currentObjectPreview = propHash
 		local previewObjectPos = ENTITY.GET_ENTITY_COORDS(previewEntity, false)
 		ImGui.Text("Move Front/Back:");ImGui.SameLine();ImGui.Spacing();ImGui.SameLine();ImGui.Text("Move Up/Down:")
@@ -237,11 +260,11 @@ object_spawner:add_imgui(function()
 			ENTITY.SET_ENTITY_COORDS(previewEntity, previewObjectPos.x, previewObjectPos.y, previewObjectPos.z - 0.01)
 		end
 	else
-		forwardX = ENTITY.GET_ENTITY_FORWARD_X(self.get_ped())
-		forwardY = ENTITY.GET_ENTITY_FORWARD_Y(self.get_ped())
-		zOffset = 0.0
 		previewStarted = false
 		previewLoop    = false
+		zOffset        = 0.0
+		forwardX       = ENTITY.GET_ENTITY_FORWARD_X(self.get_ped())
+		forwardY       = ENTITY.GET_ENTITY_FORWARD_Y(self.get_ped())
 	end
 	if NETWORK.NETWORK_IS_SESSION_ACTIVE() then
 		if not preview then
@@ -292,6 +315,11 @@ object_spawner:add_imgui(function()
 				gui.show_error("Object Spawner", "This object is blacklisted by R*.")
 			end
 		end)
+	end
+	if showInvalidObjText then
+		ImGui.PushStyleColor(ImGuiCol.Text, 1, 0.6, 0.4, 1)
+		ImGui.TextWrapped("This object is "..invalidType)
+		ImGui.PopStyleColor(1)
 	end
 	if spawned_props[1] ~= nil then
 		ImGui.Text("Spawned Objects:")
