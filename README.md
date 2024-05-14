@@ -1,10 +1,12 @@
 ## A Lua Script That Spawns GTA V Objects Using YimMenu.
 
+![object_spawner](https://github.com/xesdoog/object-spawner/assets/66764345/8d7e9b57-b57c-48bb-a1b6-aa99c86d2c88)
+
 ![object_spawner(2)](https://github.com/xesdoog/object-spawner/assets/66764345/8c5910ea-b252-4951-a8b5-145617156107)
 
 ## Setup:
 - Go to the [Releases](https://github.com/xesdoog/object-spawner/releases/latest) tab and download the latest version.
-- Unzip the archive and place **object_spawner.lua**, **os_proplist.lua** and **gta_objects.lua** inside YimMenu's scripts folder which is located at:
+- Unzip the archive and place **object_spawner.lua** and **os_data.lua** inside YimMenu's scripts folder which is located at:
   ######
       %AppData%\YimMenu\scripts
 
